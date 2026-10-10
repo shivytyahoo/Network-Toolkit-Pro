@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.shivambhalla.link_monitor"
+    namespace = "com.shiv.nettoolkitpro"
     compileSdk = flutter.compileSdkVersion
     // ndkVersion removed: app has no native code; avoids forced NDK download.
 
@@ -17,7 +17,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.shivambhalla.link_monitor"
+        applicationId = "com.shiv.nettoolkitpro"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24

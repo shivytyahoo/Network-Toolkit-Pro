@@ -1,4 +1,4 @@
-# Keep Git from trying to diff binary assets
-*.apk binary
+* text=auto eol=lf
 *.png binary
-*.jpg binary
+*.jar binary
+*.ico binary

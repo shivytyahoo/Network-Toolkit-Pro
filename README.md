@@ -1,81 +1,112 @@
-# IP Link Monitor
+# Network Toolkit Pro
 
-A Flutter Android app that continuously pings a list of IPs and alerts you the
-moment a link goes down — built for NOC engineers and anyone who babysits
-network links.
-
-![Dashboard](<dashboard screenshot.png>)
-![About](<about screenshot.png>)
+**The successor to IP Link Monitor.** What started as a single-purpose ping
+monitor is now a complete network toolkit: five utilities in one
+cross-platform Flutter app for **Android, Windows and Linux**, built from a
+single codebase.
 
 ## Download
 
-Grab the ready-to-install APK from the
-[**Releases**](https://github.com/shivytyahoo/IP-Link-Monitor/releases) page
-(`app-release.apk`), copy it to your phone and install. No build needed.
+Grab the ready-to-install Android APK from the
+[**Releases**](https://github.com/shivytyahoo/IP-Link-Monitor/releases) page,
+copy it to your phone and install. No build needed.
 
-## Features
+> The older `V1.0.0` release on that page is the original IP Link Monitor
+> app. The Network Toolkit Pro release is the current one — its Ping
+> Monitor tab includes everything IP Link Monitor did, plus four more
+> tools.
 
-- **Excel import** — pick an `.xlsx`/`.xls` file; Column A = Name, Column B = IP.
-  A header row is detected automatically.
-- **Live ping loop** — every host is pinged every 5 seconds (ICMP via the OS
-  `ping` binary, with a TCP fallback on ports 80/443).
-- **Down alerts** — a notification fires when a host stops replying for
-  10 seconds, and another one when the link recovers.
-- **Dark dashboard** — UP / DOWN / TOTAL counters, per-host latency,
-  green/red status cards.
-- **Pull-to-refresh**, swipe-to-delete, clear-all, and one-tap demo data.
-- Hosts are saved on-device (SharedPreferences), so the list survives restarts.
+## The five tools
 
-## Excel format
+| Tab | What it does |
+|-----|--------------|
+| **Ping Monitor** | Watches multiple hosts every 5 s, shows UP/DOWN + latency, keeps history, and fires a local notification when a host stays down for 10 s (and when it recovers). Hosts persist across restarts; import from Excel (Name in column A, IP in column B) or add manually. |
+| **Speed Test** | Latency, download and upload against a selectable server: Cloudflare, Hetzner, OVHcloud, Google (ping only), any **LibreSpeed** server, or any **Ookla** (speedtest.net) server — the public server lists are fetched live. Live throughput graph, selectable display units (Kbps / Mbps / Gbps / KBps / MBps / GBps), and the actual Cloudflare PoP city you are routed to (e.g. BOM → Mumbai). |
+| **Port Scanner** | TCP-connect scan of 25 common ports (or a custom list like `80,443,8000-8100`) on any host, with per-port response times and OPEN/CLOSED pills. |
+| **LAN Discovery** | Detects your local /24 subnet, sweeps all 254 addresses with a fast TCP probe, and lists live devices with latency and reverse-DNS hostnames. |
+| **Wi-Fi Info** | SSID, BSSID, signal strength (dBm + %), frequency/band, radio type and local IP. Sources: `network_info_plus` on Android, `netsh wlan show interfaces` on Windows, `nmcli` on Linux. |
+
+## Excel format (Ping Monitor import)
 
 | A (Name)     | B (IP)        |
 |--------------|---------------|
 | Core Router  | 192.168.1.1   |
 | Branch Link  | 10.10.10.2    |
 
-## Permissions
+A header row is detected automatically.
 
-- `INTERNET` — required to ping hosts.
-- `POST_NOTIFICATIONS` — required for down/up alerts (asked at runtime on
+## Permissions (Android)
+
+- `INTERNET` / `ACCESS_NETWORK_STATE` — pinging hosts and running tests.
+- `ACCESS_WIFI_STATE` + location (`ACCESS_COARSE_LOCATION` /
+  `ACCESS_FINE_LOCATION`) — Android requires location permission to read
+  the Wi-Fi SSID; it is requested in-app and used for nothing else.
+- `POST_NOTIFICATIONS` — down/recovery alerts (asked at runtime on
   Android 13+).
 
 ## Build from source
 
+Prerequisites: Flutter 3.47+ (Dart 3.13+), JDK 17 for Android.
+
 ```bash
 flutter pub get
+flutter analyze          # must be clean
 flutter build apk --release
 # APK: build/app/outputs/flutter-apk/app-release.apk
 ```
 
-The repo also builds for Linux (`flutter build linux`) — desktop platforms skip
-notifications gracefully.
+Windows and Linux desktop builds:
 
-> **Note:** binary files (Gradle wrapper jar, launcher icons) are stored as
-> base64 in `tools/binaries/`. After cloning, run once:
->
-> ```bash
-> bash tools/restore_binaries.sh
-> ```
+```bash
+flutter build windows    # -> build/windows/x64/runner/Release/
+flutter build linux      # -> build/linux/x64/release/bundle/
+```
 
-## How it works
+Every push to `main` is built automatically by GitHub Actions, and every
+`v*` tag publishes a Release with the Android APK attached.
 
-`lib/main.dart` holds the whole app (~800 lines):
+## Tech notes
 
-- `MonitorService` — host list, 5-second ping timer, SharedPreferences
-  persistence, notification logic.
-- `pingHost()` — tries OS ICMP ping first, falls back to TCP connect on
-  ports 80 and 443 (useful on networks that block ICMP).
-- `HomeScreen` — dark dashboard with live counters and host cards.
-- `AboutPage` — version info and feature summary.
+- Pure Dart first (`dart:io` sockets/HTTP/processes). Platform specifics:
+  - **Ping**: OS `ping` binary, with a TCP-connect fallback on ports
+    80/443 when ICMP is missing or blocked.
+  - **Wi-Fi signal on Android/Linux**: parsed from `/proc/net/wireless`
+    (world-readable, no root).
+  - **Notifications**: `flutter_local_notifications` on Android; desktop
+    builds skip initialisation gracefully.
+- Hosts, speed-test server choice and display unit persist on-device
+  (SharedPreferences).
 
-## Limitations
+## Planned for v2
 
-- Ping interval (5 s) and the down threshold (10 s) are currently hardcoded.
-- ICMP needs the OS `ping` binary; where it is missing or blocked, the TCP
-  fallback decides reachability, so a host with all ports filtered may read
-  as down.
-- Background execution follows normal Android Doze rules; for 24×7
-  monitoring, exempt the app from battery optimization.
+- **Background monitoring service** — today the ping loop runs while the
+  app is open; v2 adds an Android foreground service so down-alerts
+  arrive with the app closed.
+- **Windows installer packaging** (MSIX / Inno Setup).
+- **Play Store release** with release signing.
+- **More tools**: DNS lookup, traceroute, Wake-on-LAN, subnet calculator.
+
+## Project layout
+
+```
+lib/
+  main.dart            # app shell, Material 3 dark theme, bottom nav
+  ping/monitor.dart    # HostEntry, pingHost(), MonitorService (from Link Monitor)
+  net/
+    speed_test.dart    # multi-server latency/download/upload (Cloudflare, LibreSpeed, Ookla)
+    port_scan.dart     # TCP-connect scanner + port-spec parser
+    lan_discovery.dart # subnet detection + /24 sweep + reverse DNS
+    wifi_service.dart  # per-OS Wi-Fi providers (Android, Windows, Linux)
+  ui/
+    common.dart        # theme, palette, shared widgets
+    ping_tab.dart      # ping monitor UI
+    speed_tab.dart     # speed test UI (server picker, unit selector, PoP)
+    port_tab.dart      # port scanner UI
+    lan_tab.dart       # LAN discovery UI
+    wifi_tab.dart      # Wi-Fi info UI
+    about_page.dart
+android/  linux/  windows/   # platform runners
+```
 
 ## Developer
 
