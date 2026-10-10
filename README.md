@@ -8,7 +8,7 @@ single codebase.
 ## Download
 
 Grab the ready-to-install Android APK from the
-[**Releases**](https://github.com/shivytyahoo/IP-Link-Monitor/releases) page,
+[**Releases**](https://github.com/shivytyahoo/Network-Toolkit-Pro/releases) page,
 copy it to your phone and install. No build needed.
 
 > The older `V1.0.0` release on that page is the original IP Link Monitor
